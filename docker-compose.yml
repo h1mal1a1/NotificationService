@@ -1,0 +1,50 @@
+﻿services:
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notification-service
+    depends_on:
+      - db
+      - rabbitmq
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      PostgreSql__ConnectionString: Host=db;Port=5432;Database=notification_service_db;Username=postgres;Password=postgres
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: 5672
+      RabbitMq__UserName: guest
+      RabbitMq__Password: guest
+    ports:
+      - "8081:8080"
+    networks:
+      - notification-network
+
+  db:
+    image: postgres:16
+    container_name: notification-postgres
+    environment:
+      POSTGRES_DB: notification_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - notification_pgdata:/var/lib/postgresql/data
+    networks:
+      - notification-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: notification-rabbitmq
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    networks:
+      - notification-network
+
+volumes:
+  notification_pgdata:
+
+networks:
+  notification-network:
