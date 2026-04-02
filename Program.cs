@@ -14,7 +14,8 @@ public class Program
 
         builder.Services
             .AddAppSettings(builder.Configuration)
-            .AddPostgres(builder.Configuration);
+            .AddPostgres(builder.Configuration)
+            .AddApplicationServices();
 
         var app = builder.Build();
 
@@ -28,6 +29,7 @@ public class Program
         app.MapControllers();
 
         await app.ApplyMigrationsAsync();
+        await app.ApplySeedDataAsync();
 
         await app.RunAsync();
     }

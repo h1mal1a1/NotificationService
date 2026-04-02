@@ -31,6 +31,10 @@ public class NotificationAttemptConfiguration : IEntityTypeConfiguration<Notific
         builder.Property(x => x.ErrorMessage)
             .HasColumnName("error_message")
             .HasMaxLength(2000);
-        
+
+        builder.HasOne(x => x.Notification)
+            .WithMany(x => x.Attempts)
+            .HasForeignKey(x => x.IdNotification)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

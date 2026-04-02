@@ -12,7 +12,7 @@ public class Notification
     public int RetryCount { get; set; }
     public string? LastError { get; set; }
     public DateTime CreatedAtUtc { get; set; }
-    public DateTime? SendAtUtc { get; set; }
+    public DateTime? SentAtUtc { get; set; }
 
     public ICollection<NotificationAttempt> Attempts { get; set; } = [];
 

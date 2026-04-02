@@ -33,13 +33,16 @@ namespace NotificationService.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("body");
 
                     b.Property<int>("Channel")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("channel");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
 
                     b.Property<string>("EventType")
                         .IsRequired()
@@ -48,24 +51,33 @@ namespace NotificationService.Migrations
                         .HasColumnName("event_type");
 
                     b.Property<string>("LastError")
-                        .HasColumnType("text");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_error");
 
                     b.Property<string>("Recipient")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("recipient");
 
                     b.Property<int>("RetryCount")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("retry_count");
 
-                    b.Property<DateTime?>("SendAtUtc")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("SentAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at_utc");
 
                     b.Property<int>("Status")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
 
                     b.Property<string>("Subject")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("subject");
 
                     b.HasKey("Id");
 
@@ -102,12 +114,9 @@ namespace NotificationService.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_success");
 
-                    b.Property<long>("NotificationId")
-                        .HasColumnType("bigint");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("NotificationId");
+                    b.HasIndex("IdNotification");
 
                     b.ToTable("notification_attempts", (string)null);
                 });
@@ -157,7 +166,7 @@ namespace NotificationService.Migrations
                 {
                     b.HasOne("NotificationService.Entities.Notification", "Notification")
                         .WithMany("Attempts")
-                        .HasForeignKey("NotificationId")
+                        .HasForeignKey("IdNotification")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

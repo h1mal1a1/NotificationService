@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using NotificationService.Configuration;
 using NotificationService.Data;
+using NotificationService.Services.Email;
+using NotificationService.Services.Notifications;
 
 namespace NotificationService.Extensions;
 
@@ -24,6 +26,15 @@ public static class ServiceCollectionExtensions
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(postgresSettings.ConnectionString));
+
+        return services;
+    }
+    
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddScoped<ITemplateRenderer, TemplateRenderer>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<INotificationProcessor, NotificationProcessor>();
 
         return services;
     }
