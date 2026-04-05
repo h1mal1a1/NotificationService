@@ -5,8 +5,10 @@
       dockerfile: Dockerfile
     container_name: notification-service
     depends_on:
-      - db
-      - rabbitmq
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
@@ -31,6 +33,11 @@
       - "5433:5432"
     volumes:
       - notification_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d notification_service_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     networks:
       - notification-network
 
@@ -40,11 +47,19 @@
     ports:
       - "5673:5672"
       - "15673:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     networks:
       - notification-network
 
 volumes:
   notification_pgdata:
+  rabbitmq_data:
 
 networks:
   notification-network:

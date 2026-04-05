@@ -1,4 +1,5 @@
 using NotificationService.Extensions;
+using NotificationService.Services.RabbitMq;
 
 namespace NotificationService;
 
@@ -15,7 +16,8 @@ public class Program
         builder.Services
             .AddAppSettings(builder.Configuration)
             .AddPostgres(builder.Configuration)
-            .AddApplicationServices();
+            .AddApplicationServices()
+            .AddRabbitMq();
 
         var app = builder.Build();
 
@@ -30,6 +32,12 @@ public class Program
 
         await app.ApplyMigrationsAsync();
         await app.ApplySeedDataAsync();
+
+        await using (var scope = app.Services.CreateAsyncScope())
+        {
+            var topologyInitializer = scope.ServiceProvider.GetRequiredService<RabbitMqTopologyInitializer>();
+            await topologyInitializer.InitializeAsync();
+        }
 
         await app.RunAsync();
     }

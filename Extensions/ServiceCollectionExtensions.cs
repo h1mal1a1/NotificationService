@@ -3,6 +3,7 @@ using NotificationService.Configuration;
 using NotificationService.Data;
 using NotificationService.Services.Email;
 using NotificationService.Services.Notifications;
+using NotificationService.Services.RabbitMq;
 
 namespace NotificationService.Extensions;
 
@@ -35,6 +36,16 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITemplateRenderer, TemplateRenderer>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<INotificationProcessor, NotificationProcessor>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddRabbitMq(this IServiceCollection services)
+    {
+        services.AddSingleton<RabbitMqTopologyInitializer>();
+        services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
+        services.AddScoped<RabbitMqMessageHandler>();
+        services.AddHostedService<RabbitMqConsumerBackgroundService>();
 
         return services;
     }
