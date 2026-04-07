@@ -35,7 +35,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ITemplateRenderer, TemplateRenderer>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
-        services.AddScoped<INotificationProcessor, NotificationProcessor>();
+        services.AddScoped<INotificationCreationService, NotificationCreationService>();
+        services.AddScoped<INotificationDeliveryService, NotificationDeliveryService>();
 
         return services;
     }
@@ -46,6 +47,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IRabbitMqPublisher, RabbitMqPublisher>();
         services.AddScoped<RabbitMqMessageHandler>();
         services.AddHostedService<RabbitMqConsumerBackgroundService>();
+        services.AddHostedService<PendingNotificationsWorker>();
 
         return services;
     }

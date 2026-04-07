@@ -24,3 +24,5 @@ docker-compose.override.yml
 node_modules/
 
 *.db
+
+info.txt

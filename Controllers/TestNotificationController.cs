@@ -7,28 +7,21 @@ namespace NotificationService.Controllers;
 
 [ApiController]
 [Route("api/test-notifications")]
-public class TestNotificationsController(
-    INotificationProcessor notificationProcessor,
-    IRabbitMqPublisher rabbitMqPublisher,
-    IConfiguration configuration
-    ) : ControllerBase
+public class TestNotificationsController(INotificationCreationService notificationCreationService,
+    IRabbitMqPublisher rabbitMqPublisher, IConfiguration configuration) : ControllerBase
 {
-    private readonly INotificationProcessor _notificationProcessor = notificationProcessor;
-    private readonly IRabbitMqPublisher _rabbitMqPublisher = rabbitMqPublisher;
-    private readonly IConfiguration _configuration = configuration;
-
     [HttpPost("password-reset")]
     public async Task<IActionResult> SendPasswordResetAsync(
         [FromBody] PasswordResetRequestedEvent request,
         CancellationToken cancellationToken)
     {
-        var notificationId = await _notificationProcessor.ProcessPasswordResetAsync(
+        var notificationId = await notificationCreationService.CreatePasswordResetNotificationAsync(
             request,
             cancellationToken);
 
         return Ok(new
         {
-            message = "Notification processed.",
+            message = "Pending notification created.",
             notificationId
         });
     }
@@ -37,10 +30,10 @@ public class TestNotificationsController(
     public async Task<IActionResult> PublishPasswordResetAsync([FromBody] PasswordResetRequestedEvent request,
         CancellationToken cancellationToken)
     {
-        var routingKey = _configuration["RabbitMQ:RoutingKey"]
-                         ?? throw new InvalidOperationException("RabbitMq:RoutingKey is not configured");
-        await _rabbitMqPublisher.PublishAsync(request, routingKey, cancellationToken);
+        var routingKey = configuration["RabbitMQ:RoutingKey"]
+                         ?? throw new InvalidOperationException("RabbitMQ:RoutingKey is not configured");
+        await rabbitMqPublisher.PublishAsync(request, routingKey, cancellationToken);
 
-        return Ok(new { message = "Password reset event published to RabbitMq." });
+        return Ok(new { message = "Password reset event published to RabbitMQ." });
     }
 }

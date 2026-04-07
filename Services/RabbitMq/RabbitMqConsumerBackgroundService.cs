@@ -1,6 +1,8 @@
 ﻿using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using NotificationService.Configuration;
+using NotificationService.Contracts.Events;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -11,10 +13,7 @@ public class RabbitMqConsumerBackgroundService(
     IOptions<RabbitMqSettings> rabbitMqOptions,
     ILogger<RabbitMqConsumerBackgroundService> logger) : BackgroundService
 {
-    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private readonly RabbitMqSettings _settings = rabbitMqOptions.Value;
-    private readonly ILogger<RabbitMqConsumerBackgroundService> _logger = logger;
-
     private IConnection? _connection;
     private IChannel? _channel;
 
@@ -37,21 +36,26 @@ public class RabbitMqConsumerBackgroundService(
         consumer.ReceivedAsync += async (_, eventArgs) =>
         {
             var body = eventArgs.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
+            var messageJson = Encoding.UTF8.GetString(body);
 
             try
             {
-                await using var scope = _scopeFactory.CreateAsyncScope();
+                var message = JsonSerializer.Deserialize<PasswordResetRequestedEvent>(messageJson);
+                if (message is null)
+                    throw new InvalidOperationException("Failed to deserialize RabbitMQ message.");
+                
+                await using var scope = scopeFactory.CreateAsyncScope();
                 var handler = scope.ServiceProvider.GetRequiredService<RabbitMqMessageHandler>();
+                
                 await handler.HandlePasswordResetAsync(message, stoppingToken);
                 await _channel.BasicAckAsync(eventArgs.DeliveryTag, multiple: false, cancellationToken: stoppingToken);
 
-                _logger.LogInformation("RabbitMQ message acknowledged. DeliveryTag: {DeliveryTag}",
+                logger.LogInformation("RabbitMQ message acknowledged. DeliveryTag: {DeliveryTag}",
                     eventArgs.DeliveryTag);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while processing RabbitMq message. DeliveryTag: {DeliveryTag}",
+                logger.LogError(ex, "Error while processing RabbitMq message. DeliveryTag: {DeliveryTag}",
                     eventArgs.DeliveryTag);
                 await _channel.BasicNackAsync(eventArgs.DeliveryTag, multiple: false, requeue: false,
                     cancellationToken: stoppingToken);
@@ -59,7 +63,7 @@ public class RabbitMqConsumerBackgroundService(
         };
         await _channel.BasicConsumeAsync(queue: _settings.Queue, autoAck: false, consumer: consumer,
             cancellationToken: stoppingToken);
-        _logger.LogInformation("RabbitMQ consumer started. Queue: {Queue}", _settings.Queue);
+        logger.LogInformation("RabbitMQ consumer started. Queue: {Queue}", _settings.Queue);
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }

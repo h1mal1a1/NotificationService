@@ -2,9 +2,8 @@
 
 namespace NotificationService.Services.Notifications;
 
-public interface INotificationProcessor
+public interface INotificationCreationService
 {
-    Task<long> ProcessPasswordResetAsync(
-        PasswordResetRequestedEvent notificationEvent,
+    Task<long> CreatePasswordResetNotificationAsync(PasswordResetRequestedEvent message,
         CancellationToken cancellationToken = default);
 }
