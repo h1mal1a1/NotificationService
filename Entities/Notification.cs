@@ -3,6 +3,7 @@
 public class Notification
 {
     public long Id { get; set; }
+    public Guid MessageId { get; set; }
     public string EventType { get; set; } = null!;
     public NotificationChannel Channel { get; set; }
     public string Recipient { get; set; } = null!;

@@ -13,6 +13,12 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(x => x.Id)
             .HasColumnName("id");
 
+        builder.Property(x => x.MessageId)
+            .HasColumnName("message_id")
+            .IsRequired();
+        builder.HasIndex(x => x.MessageId)
+            .IsUnique();
+        
         builder.Property(x => x.EventType)
             .HasColumnName("event_type")
             .HasMaxLength(200)

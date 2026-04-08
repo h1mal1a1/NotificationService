@@ -34,7 +34,10 @@ public class PendingNotificationsWorker(
                     .ToListAsync(cancellationToken: stoppingToken);
                 foreach (var notificationId in pendingNotificationIds.TakeWhile(_ =>
                              !stoppingToken.IsCancellationRequested))
+                {
+                    logger.LogInformation("Processing notification {NotificationId}", notificationId);
                     await deliveryService.DeliverAsync(notificationId, stoppingToken);
+                }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
