@@ -32,8 +32,10 @@ public class NotificationCreationService(
         
         var template = await dbContext.NotificationsTemplates
             .FirstOrDefaultAsync(
-                x => x.TemplateCode == PasswordResetTemplateCode && x.Channel == NotificationChannel.Email &&
-                     x.IsActive, cancellationToken);
+                x => x.TemplateCode == PasswordResetTemplateCode 
+                     && x.Channel == NotificationChannel.Email 
+                     && x.IsActive, 
+                cancellationToken);
         if (template is null)
             throw new InvalidOperationException(
                 $"Active template '{PasswordResetTemplateCode}' for Email channel was not found");
@@ -47,8 +49,8 @@ public class NotificationCreationService(
 
         var subject = templateRenderer.Render(template.SubjectTemplate, templateValues);
         var body = templateRenderer.Render(template.BodyTemplate, templateValues);
-
-        var notification = new Notification()
+        var now = DateTime.UtcNow;
+        var notification = new Notification
         {
             MessageId = notificationEvent.MessageId,
             EventType = nameof(PasswordResetRequestedEvent),
@@ -59,8 +61,11 @@ public class NotificationCreationService(
             Status = NotificationStatus.Pending,
             RetryCount = 0,
             LastError = null,
-            CreatedAtUtc = DateTime.UtcNow,
-            SentAtUtc = null
+            CreatedAtUtc = now,
+            SentAtUtc = null,
+            NextAttemptAtUtc = now,
+            LastAttemptAtUtc = null,
+            ProcessingStartedAtUtc = null
         };
 
         dbContext.Notifications.Add(notification);
@@ -72,16 +77,18 @@ public class NotificationCreationService(
         {
             var duplicateNotification = await dbContext.Notifications
                 .FirstAsync(x => x.MessageId == notificationEvent.MessageId, cancellationToken);
-            if (duplicateNotification is null)
-                throw;
+
             logger.LogWarning(
                 "Duplicate notification detected by unique index. MessageId: {MessageId}, " +
                 "NotificationId: {NotificationId}", notificationEvent.MessageId, duplicateNotification.Id);
             return duplicateNotification.Id;
         }
 
-        logger.LogInformation("Pending notification {NotificationId} was created for {Recipient} with " +
-                              "MessageId: {MessageId}", notification.Id, notification.Recipient, notification.MessageId);
+        logger.LogInformation(
+            "Pending notification {NotificationId} was created for {Recipient} with MessageId: {MessageId}", 
+            notification.Id, 
+            notification.Recipient, 
+            notification.MessageId);
         return notification.Id;
     }
 }

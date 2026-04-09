@@ -37,7 +37,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<INotificationCreationService, NotificationCreationService>();
         services.AddScoped<INotificationDeliveryService, NotificationDeliveryService>();
-
+        services.AddSingleton<IRetryDelayCalculator, ExponentialRetryDelayCalculator>(); 
+        
         return services;
     }
 

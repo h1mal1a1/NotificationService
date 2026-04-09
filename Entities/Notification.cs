@@ -14,7 +14,9 @@ public class Notification
     public string? LastError { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? SentAtUtc { get; set; }
-
+    public DateTime NextAttemptAtUtc { get; set; }
+    public DateTime? LastAttemptAtUtc { get; set; }
+    public DateTime? ProcessingStartedAtUtc { get; set; }
     public ICollection<NotificationAttempt> Attempts { get; set; } = [];
 
 }

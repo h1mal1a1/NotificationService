@@ -26,6 +26,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         
         builder.Property(x => x.Channel)
             .HasColumnName("channel")
+            .HasConversion<string>()
+            .HasMaxLength(50)
             .IsRequired();
 
         builder.Property(x => x.Recipient)
@@ -44,6 +46,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
 
         builder.Property(x => x.Status)
             .HasColumnName("status")
+            .HasConversion<string>()
+            .HasMaxLength(50)
             .IsRequired();
 
         builder.Property(x => x.RetryCount)
@@ -60,5 +64,17 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
 
         builder.Property(x => x.SentAtUtc)
             .HasColumnName("sent_at_utc");
+        
+        builder.Property(x => x.NextAttemptAtUtc)
+            .HasColumnName("next_attempt_at_utc")
+            .IsRequired();
+
+        builder.Property(x => x.LastAttemptAtUtc)
+            .HasColumnName("last_attempt_at_utc");
+
+        builder.Property(x => x.ProcessingStartedAtUtc)
+            .HasColumnName("processing_started_at_utc");
+
+        builder.HasIndex(x => new { x.Status, x.NextAttemptAtUtc });
     }
 }

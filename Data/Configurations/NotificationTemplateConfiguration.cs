@@ -22,6 +22,8 @@ public class NotificationTemplateConfiguration : IEntityTypeConfiguration<Notifi
 
         builder.Property(x => x.Channel)
             .HasColumnName("channel")
+            .HasConversion<string>()
+            .HasMaxLength(50)
             .IsRequired();
 
         builder.Property(x => x.SubjectTemplate)

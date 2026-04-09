@@ -16,7 +16,7 @@ public class PendingNotificationsWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("Pending notifications worker started");
-        var pollingDelay = TimeSpan.FromSeconds(Math.Max(1, _retrySettings.DelaySeconds));
+        var pollInterval = TimeSpan.FromSeconds(Math.Max(1, _retrySettings.PollIntervalSeconds));
         
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -25,16 +25,26 @@ public class PendingNotificationsWorker(
                 using var scope = scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var deliveryService = scope.ServiceProvider.GetRequiredService<INotificationDeliveryService>();
+
+                var now = DateTime.UtcNow;
+                await ReturnStuckProcessingNotificationsAsync(dbContext, now, stoppingToken);
+
+                var batchSize = Math.Max(1, _retrySettings.BatchSize);
+                var maxAttempts = Math.Max(1, _retrySettings.MaxAttempts);
+                
                 var pendingNotificationIds = await dbContext.Notifications
                     .Where(x => x.Status == NotificationStatus.Pending)
-                    .Where(x => x.RetryCount < _retrySettings.MaxAttempts)
-                    .OrderBy(x => x.CreatedAtUtc)
+                    .Where(x=>x.NextAttemptAtUtc <= now)
+                    .Where(x => x.RetryCount < maxAttempts)
+                    .OrderBy(x => x.NextAttemptAtUtc)
+                    .ThenBy(x=>x.CreatedAtUtc)
                     .Select(x => x.Id)
-                    .Take(10)
+                    .Take(batchSize)
                     .ToListAsync(cancellationToken: stoppingToken);
-                foreach (var notificationId in pendingNotificationIds.TakeWhile(_ =>
-                             !stoppingToken.IsCancellationRequested))
+                foreach (var notificationId in pendingNotificationIds)
                 {
+                    if (stoppingToken.IsCancellationRequested)
+                        break;
                     logger.LogInformation("Processing notification {NotificationId}", notificationId);
                     await deliveryService.DeliverAsync(notificationId, stoppingToken);
                 }
@@ -50,7 +60,7 @@ public class PendingNotificationsWorker(
 
             try
             {
-                await Task.Delay(pollingDelay, stoppingToken);
+                await Task.Delay(pollInterval, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -59,5 +69,31 @@ public class PendingNotificationsWorker(
         }
 
         logger.LogInformation("Pending notifications worker stopped");
+    }
+
+    private async Task ReturnStuckProcessingNotificationsAsync(
+        AppDbContext dbContext, 
+        DateTime now, 
+        CancellationToken cancellationToken)
+    {
+        var processingTimeoutSeconds = Math.Max(1, _retrySettings.ProcessingTimeoutSeconds);
+        var timeoutBoundary = now.AddSeconds(-processingTimeoutSeconds);
+        var stuckNotifications = await dbContext.Notifications
+            .Where(x => x.Status == NotificationStatus.Processing)
+            .Where(x => x.ProcessingStartedAtUtc != null)
+            .Where(x => x.ProcessingStartedAtUtc < timeoutBoundary)
+            .ToListAsync(cancellationToken);
+        if (stuckNotifications.Count == 0) return;
+        foreach (var notification in stuckNotifications)
+        {
+            notification.Status = NotificationStatus.Pending;
+            notification.ProcessingStartedAtUtc = null;
+            notification.NextAttemptAtUtc = now;
+            notification.LastError = "Processing timeout exceeded. Notification returned to pending state.";
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        logger.LogWarning("Returned {Count} stuck processing notifications back to pending state",
+            stuckNotifications.Count);
     }
 }
