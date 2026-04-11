@@ -15,8 +15,9 @@ Thumbs.db
 
 docker-compose.override.yml
 
-.env
-.env.*
+.env.notification-service
+.env.db
+
 
 *.pem
 *.key
