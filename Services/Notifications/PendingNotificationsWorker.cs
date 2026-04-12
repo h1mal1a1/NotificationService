@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using NotificationService.Configuration;
 using NotificationService.Data;
 using NotificationService.Entities;
+using NotificationService.Services.Metrics;
 
 namespace NotificationService.Services.Notifications;
 
@@ -26,6 +27,24 @@ public class PendingNotificationsWorker(
                 var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var deliveryService = scope.ServiceProvider.GetRequiredService<INotificationDeliveryService>();
 
+                var metrics = scope.ServiceProvider.GetRequiredService<NotificationMetrics>();
+                var pendingCount =await dbContext.Notifications.CountAsync(
+                    x => x.Status == NotificationStatus.Pending,
+                        stoppingToken);
+                var processingCount =await dbContext.Notifications.CountAsync(
+                    x => x.Status == NotificationStatus.Processing,
+                    stoppingToken);
+                var sentCount =await dbContext.Notifications.CountAsync(
+                    x => x.Status == NotificationStatus.Sent,
+                    stoppingToken);
+                var exhaustedCount =await dbContext.Notifications.CountAsync(
+                    x => x.Status == NotificationStatus.Exhausted,
+                    stoppingToken);
+                metrics.SetStatusCount("pending",pendingCount);
+                metrics.SetStatusCount("processing",processingCount);
+                metrics.SetStatusCount("sent",sentCount);
+                metrics.SetStatusCount("exhausted",exhaustedCount);
+                
                 var now = DateTime.UtcNow;
                 await ReturnStuckProcessingNotificationsAsync(dbContext, now, stoppingToken);
 

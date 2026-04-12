@@ -2,6 +2,7 @@
 using NotificationService.Configuration;
 using NotificationService.Data;
 using NotificationService.Services.Email;
+using NotificationService.Services.Metrics;
 using NotificationService.Services.Notifications;
 using NotificationService.Services.RabbitMq;
 
@@ -37,7 +38,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<INotificationCreationService, NotificationCreationService>();
         services.AddScoped<INotificationDeliveryService, NotificationDeliveryService>();
-        services.AddSingleton<IRetryDelayCalculator, ExponentialRetryDelayCalculator>(); 
+        services.AddSingleton<IRetryDelayCalculator, ExponentialRetryDelayCalculator>();
+        services.AddSingleton<NotificationMetrics>();
         
         return services;
     }

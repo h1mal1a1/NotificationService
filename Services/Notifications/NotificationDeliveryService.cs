@@ -4,6 +4,7 @@ using NotificationService.Configuration;
 using NotificationService.Data;
 using NotificationService.Entities;
 using NotificationService.Services.Email;
+using NotificationService.Services.Metrics;
 
 namespace NotificationService.Services.Notifications;
 
@@ -12,6 +13,7 @@ public class NotificationDeliveryService(
     IEmailSender emailSender,
     IRetryDelayCalculator retryDelayCalculator,
     IOptions<RetrySettings> retryOptions,
+    NotificationMetrics metrics,
     ILogger<NotificationDeliveryService> logger) : INotificationDeliveryService
 {
     private readonly RetrySettings _retrySettings = retryOptions.Value;
@@ -55,6 +57,8 @@ public class NotificationDeliveryService(
             notification.ProcessingStartedAtUtc = null;
             
             await dbContext.SaveChangesAsync(cancellationToken);
+            metrics.IncrementExhausted();
+            metrics.ObserveRetryCount(notification.RetryCount);
             
             logger.LogWarning("Notification {NotificationId} exceeded maximum attempts and was marked as exhausted",
                 notificationId);
@@ -68,9 +72,14 @@ public class NotificationDeliveryService(
             notification.LastAttemptAtUtc = now;
             
             await dbContext.SaveChangesAsync(cancellationToken);
-            
-            await emailSender.SendAsync(notification.Recipient, notification.Subject, notification.Body,
-                cancellationToken);
+            using (metrics.StartDeliveryTimer())
+            {
+                await emailSender.SendAsync(
+                    notification.Recipient, 
+                    notification.Subject, 
+                    notification.Body,
+                    cancellationToken);    
+            }
             
             var sentAtUtc = DateTime.UtcNow;
             
@@ -89,6 +98,8 @@ public class NotificationDeliveryService(
             });
 
             await dbContext.SaveChangesAsync(cancellationToken);
+            metrics.IncrementSent();
+            metrics.ObserveRetryCount(notification.RetryCount);
             logger.LogInformation("Notification {NotificationId} was sent successfully on attempt {AttemptNumber}",
                 notification.Id, attemptNumber);
         }
@@ -99,10 +110,12 @@ public class NotificationDeliveryService(
             notification.RetryCount += 1;
             notification.LastError = ex.Message;
             notification.ProcessingStartedAtUtc = null;
-            
+
+            var becameExhausted = false;
             if (notification.RetryCount >= maxAttempts)
             {
                 notification.Status = NotificationStatus.Exhausted;
+                becameExhausted = true;
             }
             else
             {
@@ -121,6 +134,13 @@ public class NotificationDeliveryService(
             });
 
             await dbContext.SaveChangesAsync(cancellationToken);
+            metrics.IncrementFailedAttempt();
+
+            if (becameExhausted)
+            {
+                metrics.IncrementExhausted();
+                metrics.ObserveRetryCount(notification.RetryCount);
+            }
 
             logger.LogWarning(ex,
                 "Failed to send notification {NotificationId} on attempt {Attempt}/{MaxAttempts}.",

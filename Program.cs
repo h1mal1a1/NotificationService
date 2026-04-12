@@ -1,5 +1,6 @@
 using NotificationService.Extensions;
 using NotificationService.Services.RabbitMq;
+using Prometheus;
 
 namespace NotificationService;
 
@@ -31,8 +32,10 @@ public class Program
             app.UseHttpsRedirection();
         }
 
-
+        app.UseHttpMetrics();
+        
         app.MapControllers();
+        app.MapMetrics();
 
         await app.ApplyMigrationsAsync();
         await app.ApplySeedDataAsync();

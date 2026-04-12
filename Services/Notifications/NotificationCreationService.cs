@@ -2,12 +2,14 @@
 using NotificationService.Contracts.Events;
 using NotificationService.Data;
 using NotificationService.Entities;
+using NotificationService.Services.Metrics;
 
 namespace NotificationService.Services.Notifications;
 
 public class NotificationCreationService(
     AppDbContext dbContext,
     ITemplateRenderer templateRenderer,
+    NotificationMetrics metrics,
     ILogger<NotificationCreationService> logger)
     : INotificationCreationService
 {
@@ -72,6 +74,7 @@ public class NotificationCreationService(
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
+            metrics.IncrementCreated();
         }
         catch (DbUpdateException)
         {
