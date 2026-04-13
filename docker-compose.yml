@@ -83,7 +83,7 @@
       - prometheus
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - notification-network
 

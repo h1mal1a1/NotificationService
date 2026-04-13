@@ -1,9 +1,9 @@
-﻿{
+{
   "annotations": {
     "list": [
       {
         "builtIn": 1,
-        "datasource": "Prometheus",
+        "datasource": "-- Grafana --",
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -15,7 +15,6 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
   "links": [],
   "panels": [
     {
@@ -350,7 +349,6 @@
   },
   "timezone": "browser",
   "title": "Notification Service Dashboard",
-  "uid": "notification-service-dashboard",
   "version": 1,
   "weekStart": ""
 }
