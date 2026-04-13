@@ -63,6 +63,8 @@
   prometheus:
     image: prom/prometheus:latest
     container_name: notification-prometheus
+    profiles:
+      - monitoring
     ports:
       - "9090:9090"
     volumes:
@@ -71,10 +73,12 @@
       - notification-service
     networks:
       - notification-network
-  
+
   grafana:
     image: grafana/grafana:latest
     container_name: notification-grafana
+    profiles:
+      - monitoring
     ports:
       - "3000:3000"
     env_file:
