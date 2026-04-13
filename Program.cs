@@ -18,7 +18,8 @@ public class Program
             .AddAppSettings(builder.Configuration)
             .AddPostgres(builder.Configuration)
             .AddApplicationServices()
-            .AddRabbitMq();
+            .AddRabbitMq()
+            .AddAppHealthChecks(builder.Configuration);
 
         var app = builder.Build();
 

@@ -5,6 +5,7 @@ using NotificationService.Services.Email;
 using NotificationService.Services.Metrics;
 using NotificationService.Services.Notifications;
 using NotificationService.Services.RabbitMq;
+using RabbitMQ.Client;
 
 namespace NotificationService.Extensions;
 
@@ -51,6 +52,41 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RabbitMqMessageHandler>();
         services.AddHostedService<RabbitMqConsumerBackgroundService>();
         services.AddHostedService<PendingNotificationsWorker>();
+
+        return services;
+    }
+    
+    public static IServiceCollection AddAppHealthChecks(this IServiceCollection services, IConfiguration configuration)
+    {
+        var postgresSettings = configuration
+                                   .GetSection(PostgreSqlSettings.SectionName)
+                                   .Get<PostgreSqlSettings>()
+                               ?? throw new Exception("PostgreSql settings not found");
+
+        var rabbitMqSettings = configuration
+                                   .GetSection(RabbitMqSettings.SectionName)
+                                   .Get<RabbitMqSettings>()
+                               ?? throw new Exception("RabbitMq settings not found");
+
+        services.AddHealthChecks()
+            .AddNpgSql(
+                connectionString: postgresSettings.ConnectionString,
+                name: "postgresql",
+                tags: ["db"])
+            .AddRabbitMQ(
+                sp =>
+                {
+                    var factory = new ConnectionFactory()
+                    {
+                        HostName = rabbitMqSettings.Host,
+                        Port = rabbitMqSettings.Port,
+                        UserName = rabbitMqSettings.UserName,
+                        Password = rabbitMqSettings.Password
+                    };
+                    return factory.CreateConnectionAsync();
+                },
+                name: "rabbitmq",
+                tags: ["queue"]);
 
         return services;
     }
